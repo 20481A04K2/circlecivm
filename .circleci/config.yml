@@ -58,7 +58,7 @@ jobs:
       - run:
           name: 🛠 Install zip (required for packaging app)
           command: |
-            sudo apt-get update && sudo apt-get install -y zip
+            apt-get update && apt-get install -y zip
 
       - run:
           name: 🌐 Get external IP of GCP VM
