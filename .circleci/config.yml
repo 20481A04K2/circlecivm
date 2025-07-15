@@ -58,7 +58,7 @@ jobs:
       - run:
           name: 🛠 Install zip (required for packaging app)
           command: |
-            apt-get update && apt-get install -y zip
+            apt-get update && apt-get install -y zip unzip openssh-client
 
       - run:
           name: 🌐 Get external IP of GCP VM
@@ -74,6 +74,12 @@ jobs:
             source $BASH_ENV
             zip -r app.zip . -x ".git/*"
             gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
+
+      - run:
+          name: 🔑 Generate SSH key to avoid prompt
+          command: |
+            mkdir -p ~/.ssh
+            ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -C $GCP_VM_USER -q -N ""
 
       - run:
           name: 🚀 Build & Run Flask App on GCP VM
