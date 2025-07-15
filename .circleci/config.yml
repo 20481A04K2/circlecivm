@@ -1,12 +1,13 @@
 version: 2.1
 
-orbs:
-  gcp-cli: circleci/gcp-cli@2.2.0
-
 executors:
   python-linter:
     docker:
       - image: circleci/python:3.9
+
+  custom-gcloud:
+    docker:
+      - image: google/cloud-sdk:slim
 
 jobs:
   test:
@@ -20,12 +21,9 @@ jobs:
             pylint app.py --disable=import-error || true
 
   deploy:
-    executor: gcp-cli/default
+    executor: custom-gcloud
     steps:
       - checkout
-
-      - gcp-cli/install
-      - gcp-cli/initialize
 
       - run:
           name: ✅ Validate required environment variables
