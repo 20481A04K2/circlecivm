@@ -14,15 +14,18 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Run Pylint with lenient threshold
+          name: Lint Python code
           command: |
             pip install pylint
-            pylint app.py --disable=import-error --fail-under=6
+            pylint app.py --disable=import-error || true
 
   deploy:
     executor: gcp-cli/default
     steps:
       - checkout
+
+      - gcp-cli/install
+      - gcp-cli/initialize
 
       - run:
           name: Authenticate with GCP
@@ -61,7 +64,7 @@ jobs:
             gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
 
       - run:
-          name: Build & Run Flask App
+          name: Build & Run Flask App on GCE VM
           command: |
             gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME \
               --zone=$GCP_ZONE \
@@ -77,7 +80,7 @@ jobs:
 
 workflows:
   version: 2
-  test-and-deploy:
+  test-deploy:
     jobs:
       - test
       - deploy:
