@@ -27,16 +27,38 @@ jobs:
       - gcp-cli/install
       - gcp-cli/initialize
 
-     
       - run:
-          name: Authenticate with GCP
+          name: ✅ Validate required environment variables
+          shell: /bin/bash
+          command: |
+            REQUIRED_VARS=("GCP_SA_KEY_B64" "GCP_PROJECT_ID" "GCP_VM_NAME" "GCP_VM_USER" "GCP_ZONE")
+            for i in "${REQUIRED_VARS[@]}"; do
+              if [[ -z "${!i}" ]]; then
+                echo "❌ ERROR: Missing environment variable $i"
+                exit 1
+              else
+                echo "✅ $i is set"
+              fi
+            done
+
+      - run:
+          name: 🧪 Debug - Print environment variable values
+          command: |
+            echo "GCP_PROJECT_ID=$GCP_PROJECT_ID"
+            echo "GCP_VM_NAME=$GCP_VM_NAME"
+            echo "GCP_VM_USER=$GCP_VM_USER"
+            echo "GCP_ZONE=$GCP_ZONE"
+            echo "GCP_SA_KEY_B64 length=$(echo $GCP_SA_KEY_B64 | wc -c)"
+
+      - run:
+          name: 🔐 Authenticate with GCP
           command: |
             echo "$GCP_SA_KEY_B64" | base64 -d > gcloud-key.json
             gcloud auth activate-service-account --key-file=gcloud-key.json
             gcloud config set project "$GCP_PROJECT_ID"
 
       - run:
-          name: Get external IP of VM
+          name: 🌐 Get external IP of GCP VM
           command: |
             export VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" \
               --zone="$GCP_ZONE" \
@@ -44,14 +66,14 @@ jobs:
             echo "export GCP_VM_IP=$VM_IP" >> $BASH_ENV
 
       - run:
-          name: Zip and Transfer App
+          name: 📦 Zip and Transfer Flask App to VM
           command: |
             source $BASH_ENV
             zip -r app.zip . -x ".git/*"
             gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
 
       - run:
-          name: Build & Run Flask App on GCE VM
+          name: 🚀 Build & Run Flask App on GCP VM
           command: |
             gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME \
               --zone=$GCP_ZONE \
