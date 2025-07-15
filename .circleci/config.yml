@@ -8,30 +8,51 @@ jobs:
       - checkout
 
       - run:
-          name: Setup SSH access
+          name: Authenticate with GCP using Service Account JSON
           command: |
-            mkdir -p ~/.ssh
-            echo "$GCP_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan "$GCP_VM_IP" >> ~/.ssh/known_hosts
+            echo "$GCP_SA_KEY_B64" | base64 -d > gcloud-key.json
+            gcloud auth activate-service-account --key-file=gcloud-key.json
+            gcloud config set project "$GCP_PROJECT_ID"
+
+      - run:
+          name: Get external IP of VM
+          command: |
+            export VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" --zone="$GCP_ZONE" --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+            echo "export GCP_VM_IP=$VM_IP" >> $BASH_ENV
+
+      - run:
+          name: Wait for SSH to be ready
+          command: |
+            source $BASH_ENV
+            for i in {1..10}; do
+              if nc -zv "$GCP_VM_IP" 22; then
+                echo "SSH port is open."
+                break
+              else
+                echo "Waiting for SSH port..."
+                sleep 5
+              fi
+            done
 
       - run:
           name: Zip and Transfer App (excluding .git)
           command: |
+            source $BASH_ENV
             zip -r app.zip . -x ".git/*"
-            scp app.zip $GCP_VM_USER@$GCP_VM_IP:~
-            ssh $GCP_VM_USER@$GCP_VM_IP "mkdir -p ~/flask-app && unzip -o ~/app.zip -d ~/flask-app"
+            gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
 
       - run:
           name: Build & Run Flask App on VM with Docker
           command: |
-            ssh $GCP_VM_USER@$GCP_VM_IP bash -c "'
-              cd ~/flask-app
-              docker stop flask-app || true
-              docker rm flask-app || true
-              docker build -t flask-app .
+            gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME --zone=$GCP_ZONE --command='
+              mkdir -p ~/flask-app &&
+              unzip -o ~/app.zip -d ~/flask-app &&
+              cd ~/flask-app &&
+              docker stop flask-app || true &&
+              docker rm flask-app || true &&
+              docker build -t flask-app . &&
               docker run -d --name flask-app -p 80:80 flask-app
-            '"
+            '
 
 workflows:
   version: 2
