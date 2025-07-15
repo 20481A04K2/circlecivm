@@ -24,13 +24,13 @@ jobs:
       - run:
           name: Build and Run Docker Container on VM
           command: |
-            ssh $GCP_VM_USER@$GCP_VM_IP << EOF
+            ssh $GCP_VM_USER@$GCP_VM_IP bash -c "'
               cd ~/flask-app
               docker stop flask-app || true
               docker rm flask-app || true
               docker build -t flask-app .
               docker run -d --name flask-app -p 80:80 flask-app
-            EOF
+            '"
 
 workflows:
   version: 2
