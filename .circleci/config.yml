@@ -13,16 +13,17 @@ jobs:
             mkdir -p ~/.ssh
             echo "$GCP_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan $GCP_VM_IP >> ~/.ssh/known_hosts
+            ssh-keyscan "$GCP_VM_IP" >> ~/.ssh/known_hosts
 
       - run:
-          name: Copy App Files to GCP VM
+          name: Copy App Code to GCP VM
           command: |
-            ssh $GCP_VM_USER@$GCP_VM_IP "mkdir -p ~/flask-app"
-            scp -r * $GCP_VM_USER@$GCP_VM_IP:~/flask-app
+            tar czf app.tar.gz .
+            scp app.tar.gz $GCP_VM_USER@$GCP_VM_IP:~
+            ssh $GCP_VM_USER@$GCP_VM_IP "mkdir -p ~/flask-app && tar xzf ~/app.tar.gz -C ~/flask-app"
 
       - run:
-          name: Build and Run Docker Container on VM
+          name: Build and Run Docker Container on GCP VM
           command: |
             ssh $GCP_VM_USER@$GCP_VM_IP bash -c "'
               cd ~/flask-app
