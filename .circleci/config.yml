@@ -1,9 +1,11 @@
 version: 2.1
 
+orbs:
+  gcp-cli: circleci/gcp-cli@2.2.0
+
 jobs:
   deploy:
-    docker:
-      - image: cimg/base:stable
+    executor: gcp-cli/default
     steps:
       - checkout
 
