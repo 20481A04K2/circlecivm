@@ -5,7 +5,7 @@ orbs:
 
 jobs:
   deploy:
-    executor: gcp-cli/default  # ✅ This brings in gcloud CLI!
+    executor: gcp-cli/default
     steps:
       - checkout
 
@@ -20,6 +20,7 @@ jobs:
           name: Get external IP of VM
           command: |
             export VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" --zone="$GCP_ZONE" --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+
             echo "export GCP_VM_IP=$VM_IP" >> $BASH_ENV
 
       - run:
@@ -37,14 +38,14 @@ jobs:
             done
 
       - run:
-          name: Zip and Transfer App (excluding .git)
+          name: Zip and Transfer App
           command: |
             source $BASH_ENV
             zip -r app.zip . -x ".git/*"
             gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
 
       - run:
-          name: Build & Run Flask App on VM with Docker
+          name: Build & Run Flask App
           command: |
             gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME --zone=$GCP_ZONE --command='
               mkdir -p ~/flask-app &&
