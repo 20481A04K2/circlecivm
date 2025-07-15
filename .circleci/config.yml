@@ -5,7 +5,6 @@ executors:
     docker:
       - image: circleci/python:3.9
 
-
   custom-gcloud:
     docker:
       - image: google/cloud-sdk:slim
@@ -59,13 +58,7 @@ jobs:
       - run:
           name: 🛠 Install zip (required for packaging app)
           command: |
-            apt-get update && apt-get install -y zip unzip openssh-client
-
-      - run:
-          name: 🔑 Generate SSH key to avoid prompt
-          command: |
-            mkdir -p ~/.ssh
-            ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -C $GCP_VM_USER -q -N ""
+            apt-get update && apt-get install -y zip
 
       - run:
           name: 🌐 Get external IP of GCP VM
@@ -88,13 +81,15 @@ jobs:
             gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME \
               --zone=$GCP_ZONE \
               --command='
+                sudo apt-get update &&
+                sudo apt-get install -y unzip docker.io &&
                 mkdir -p ~/flask-app &&
                 unzip -o ~/app.zip -d ~/flask-app &&
                 cd ~/flask-app &&
-                docker stop flask-app || true &&
-                docker rm flask-app || true &&
-                docker build -t flask-app . &&
-                docker run -d --name flask-app -p 80:80 flask-app
+                sudo docker stop flask-app || true &&
+                sudo docker rm flask-app || true &&
+                sudo docker build -t flask-app . &&
+                sudo docker run -d --name flask-app -p 80:80 flask-app
               '
 
 workflows:
