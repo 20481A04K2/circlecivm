@@ -58,7 +58,13 @@ jobs:
       - run:
           name: 🛠 Install zip (required for packaging app)
           command: |
-            apt-get update && apt-get install -y zip
+            apt-get update && apt-get install -y zip unzip openssh-client
+
+      - run:
+          name: 🔑 Generate SSH key to avoid prompt
+          command: |
+            mkdir -p ~/.ssh
+            ssh-keygen -t rsa -f ~/.ssh/google_compute_engine -C $GCP_VM_USER -q -N ""
 
       - run:
           name: 🌐 Get external IP of GCP VM
