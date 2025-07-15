@@ -3,29 +3,21 @@ version: 2.1
 orbs:
   gcp-cli: circleci/gcp-cli@2.2.0
 
-executors:
-  python-linter:
-    docker:
-      - image: circleci/python:3.9
-
 jobs:
-  test:
-    executor: python-linter
-    steps:
-      - checkout
-      - run:
-          name: Lint Python code
-          command: |
-            pip install pylint
-            pylint app.py --disable=import-error || true
-
   deploy:
     executor: gcp-cli/default
     steps:
       - checkout
 
-      - gcp-cli/install
-      - gcp-cli/initialize
+      - run:
+          name: Validate environment variables
+          command: |
+            for i in GCP_SA_KEY_B64 GCP_PROJECT_ID GCP_VM_NAME GCP_VM_USER GCP_ZONE; do
+              if [[ -z "${!i}" ]]; then
+                echo "ERROR: Missing environment variable $i"
+                exit 1
+              fi
+            done
 
       - run:
           name: Authenticate with GCP
@@ -37,13 +29,11 @@ jobs:
       - run:
           name: Get external IP of VM
           command: |
-            export VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" \
-              --zone="$GCP_ZONE" \
-              --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
-            echo "export GCP_VM_IP=$VM_IP" >> $BASH_ENV
+            export GCP_VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" --zone="$GCP_ZONE" --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+            echo "export GCP_VM_IP=$GCP_VM_IP" >> $BASH_ENV
 
       - run:
-          name: Wait for SSH to be ready
+          name: Wait for SSH port
           command: |
             source $BASH_ENV
             for i in {1..10}; do
@@ -57,32 +47,27 @@ jobs:
             done
 
       - run:
-          name: Zip and Transfer App
+          name: Zip and transfer app to VM
           command: |
             source $BASH_ENV
             zip -r app.zip . -x ".git/*"
             gcloud compute scp app.zip $GCP_VM_USER@$GCP_VM_NAME:~ --zone=$GCP_ZONE
 
       - run:
-          name: Build & Run Flask App on GCE VM
+          name: Build & run Flask app on VM
           command: |
-            gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME \
-              --zone=$GCP_ZONE \
-              --command='
-                mkdir -p ~/flask-app &&
-                unzip -o ~/app.zip -d ~/flask-app &&
-                cd ~/flask-app &&
-                docker stop flask-app || true &&
-                docker rm flask-app || true &&
-                docker build -t flask-app . &&
-                docker run -d --name flask-app -p 80:80 flask-app
-              '
+            gcloud compute ssh $GCP_VM_USER@$GCP_VM_NAME --zone=$GCP_ZONE --command='
+              mkdir -p ~/flask-app &&
+              unzip -o ~/app.zip -d ~/flask-app &&
+              cd ~/flask-app &&
+              docker stop flask-app || true &&
+              docker rm flask-app || true &&
+              docker build -t flask-app . &&
+              docker run -d --name flask-app -p 80:80 flask-app
+            '
 
 workflows:
   version: 2
-  test-deploy:
+  deploy-workflow:
     jobs:
-      - test
-      - deploy:
-          requires:
-            - test
+      - deploy
