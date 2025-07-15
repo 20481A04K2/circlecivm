@@ -1,0 +1,23 @@
+version: 2.1
+
+jobs:
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+
+      - run:
+          name: Install SSH key
+          command: |
+            mkdir -p ~/.ssh
+            echo "$GCP_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan $GCP_VM_IP >> ~/.ssh/known_hosts
+
+      - run:
+          name: Deploy to GCP VM
+          command: |
+            ssh $GCP_VM_USER@$GCP_VM_IP "mkdir -p ~/myapp"
+            scp -r * $GCP_VM_USER@$GCP_VM_IP:~/myapp
+            ssh $GCP_VM_USER@$GCP_VM_IP "cd ~/myapp && ./deploy.sh"
