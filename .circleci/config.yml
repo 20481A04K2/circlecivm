@@ -56,6 +56,11 @@ jobs:
             gcloud config set project "$GCP_PROJECT_ID"
 
       - run:
+          name: 🛠 Install zip (required for packaging app)
+          command: |
+            sudo apt-get update && sudo apt-get install -y zip
+
+      - run:
           name: 🌐 Get external IP of GCP VM
           command: |
             export VM_IP=$(gcloud compute instances describe "$GCP_VM_NAME" \
