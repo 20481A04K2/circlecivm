@@ -5,7 +5,7 @@ orbs:
 
 jobs:
   deploy:
-    executor: gcp-cli/default
+    executor: gcp-cli/default  # ✅ This brings in gcloud CLI!
     steps:
       - checkout
 
