@@ -28,17 +28,6 @@ jobs:
       - gcp-cli/initialize
 
       - run:
-          name: Validate required environment variables
-          shell: bash
-          command: |
-            for i in GCP_SA_KEY_B64 GCP_PROJECT_ID GCP_VM_NAME GCP_VM_USER GCP_ZONE; do
-              if [ -z "${!i}" ]; then
-                echo "ERROR: Missing environment variable: $i"
-                exit 1
-              fi
-            done
-
-      - run:
           name: Print env vars (for debug only – remove later)
           command: |
             echo "GCP_PROJECT_ID=$GCP_PROJECT_ID"
